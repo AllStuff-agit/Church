@@ -1,2 +1,4 @@
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 2024.01.01송구영신.pptx filter=lfs diff=lfs merge=lfs -text
+배경.pptx filter=lfs diff=lfs merge=lfs -text
+주일예배PPT[[:space:]]모음.pptx filter=lfs diff=lfs merge=lfs -text
