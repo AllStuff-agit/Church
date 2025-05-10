@@ -1,1 +1,0 @@
-**https://goodday1318.tistory.com/category/%EA%B5%90%ED%9A%8CPPT**
