@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sermon Title Verse Grass Template"
+  short_description: "설교 섹션을 본문/제목/구절 슬라이드로 자동 재구성합니다."
+  default_prompt: "설교 섹션을 주보의 본문과 제목에 맞게 제목-구절들-제목 구조로 교체해줘."
