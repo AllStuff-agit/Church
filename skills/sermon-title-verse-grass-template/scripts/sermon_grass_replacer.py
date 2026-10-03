@@ -42,6 +42,8 @@ VERSE_HEADER_NAMES = ("TextBox 1", "TextBox 8")
 VERSE_BODY_NAMES = ("TextBox 2", "TextBox 15")
 UNUSED_VERSE_NAMES = ("TextBox 22",)
 TITLE_DESIGN_BASE_SIZE_PT = 48.0
+VERSE_HEADER_MAX_WIDTH_IN = 5.2
+VERSE_HEADER_MIN_SIZE_PT = 12.0
 
 BOOKS = [
     "창세기", "출애굽기", "레위기", "민수기", "신명기", "여호수아", "사사기", "룻기",
@@ -660,6 +662,28 @@ def update_title_reference(slide, reference_text: str) -> None:
     raise ValueError("제목 슬라이드에서 '성경구절' 텍스트 상자를 찾지 못했습니다")
 
 
+def set_single_line_verse_header(shape, text: str) -> None:
+    """Keep the chapter label in the upper-left verse header on one line."""
+    tx_body = shape._element.find(f"{{{PML_NS}}}txBody")
+    body_pr = tx_body.find(f"{{{A_NS}}}bodyPr") if tx_body is not None else None
+    if body_pr is not None:
+        body_pr.set("wrap", "none")
+
+    base_size = font_size_from_rpr(first_text_run_pr(shape), 20.0)
+    size = base_size
+    while size > VERSE_HEADER_MIN_SIZE_PT:
+        estimated_width = sum(char_width_in(char, size) for char in text)
+        if estimated_width + 0.35 <= VERSE_HEADER_MAX_WIDTH_IN:
+            break
+        size -= 0.5
+
+    estimated_width = sum(char_width_in(char, size) for char in text)
+    required_width = max(3.2, min(VERSE_HEADER_MAX_WIDTH_IN, estimated_width + 0.35))
+    if hasattr(shape, "width"):
+        shape.width = max(int(shape.width), emu(required_width))
+    set_single_run_text_preserving_style(shape, text, size_pt=size)
+
+
 def shape_text_from_el(shape_el) -> str:
     return "".join(t.text or "" for t in shape_el.findall(f".//{{{A_NS}}}t"))
 
@@ -933,13 +957,38 @@ def char_width_in(char: str, font_size: float) -> float:
 
 
 def split_title_lines(title: str, font_size: float, max_width: float) -> list[str]:
-    words = title.strip().split()
+    raw = re.sub(r"[ \t]+", " ", title.strip())
+    if not raw:
+        return [""]
+
+    explicit_lines = [re.sub(r"[ \t]+", " ", line.strip()) for line in raw.splitlines()]
+    explicit_lines = [line for line in explicit_lines if line]
+    if len(explicit_lines) >= 2:
+        # An explicitly supplied line break is authoritative. The title
+        # template has two title rows, so keep any unexpected extra lines in
+        # the second row instead of silently dropping them.
+        return [explicit_lines[0], " ".join(explicit_lines[1:])]
+
+    def width(s: str) -> float:
+        return sum(char_width_in(c, font_size) for c in s)
+
+    # Prefer a sentence/clause boundary over an arbitrary word boundary.
+    # This keeps titles such as "120년의 은혜, 다시 성령의 부흥으로" as
+    # "120년의 은혜," / "다시 성령의 부흥으로".
+    punctuation_splits = [m.end() for m in re.finditer(r"[,，:：;；]", raw)]
+    if punctuation_splits:
+        midpoint = len(raw) / 2
+        for split_at in sorted(punctuation_splits, key=lambda pos: abs(pos - midpoint)):
+            left = raw[:split_at].strip()
+            right = raw[split_at:].strip()
+            if left and right and width(left) <= max_width and width(right) <= max_width:
+                return [left, right]
+
+    words = raw.split()
     if not words:
         return [""]
     lines: list[str] = []
     current = ""
-    def width(s: str) -> float:
-        return sum(char_width_in(c, font_size) for c in s)
     for w in words:
         cand = w if not current else current + " " + w
         if current and width(cand) > max_width:
@@ -952,7 +1001,6 @@ def split_title_lines(title: str, font_size: float, max_width: float) -> list[st
     if len(lines) <= 2:
         return lines
     # If spaces create too many lines, rebalance by visible character count into 2 lines.
-    raw = title.strip()
     mid = len(raw) // 2
     split_at = max(raw.rfind(" ", 0, mid + 1), 0)
     if split_at <= 0:
@@ -1138,7 +1186,7 @@ def update_verse_slide(slide, ref: VerseRef, verse_text: str) -> None:
             continue
         if sh.name in VERSE_HEADER_NAMES:
             set_shape_name(sh, "TextBox 1")
-            set_single_run_text_preserving_style(sh, header)
+            set_single_line_verse_header(sh, header)
             header_done = True
         elif sh.name in VERSE_BODY_NAMES:
             set_shape_name(sh, "TextBox 2")
