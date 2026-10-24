@@ -2,7 +2,7 @@
 """Replace a worship PPT sermon section with grass-theme title and verse slides.
 
 This script is intentionally repo-local and tuned for the church worship PPT
-assets under /mnt/c/Oddments_Repository/교회/주일 예배자료.
+assets under <repo>/주일 예배자료.
 """
 
 from __future__ import annotations
@@ -33,9 +33,10 @@ XML_NS = "http://www.w3.org/XML/1998/namespace"
 P14_EXT_URI = "{521415D9-36F7-43E2-AB2F-B90AF26B5E84}"
 NS = {"p": PML_NS, "p14": P14_NS}
 
-DEFAULT_BIBLE_ROOT = "/mnt/c/Oddments_Repository/교회/주일 예배자료/2. 개역개정성경ppt"
+DATA_ROOT = Path(__file__).resolve().parents[4] / "주일 예배자료"
+DEFAULT_BIBLE_ROOT = str(DATA_ROOT / "2. 개역개정성경ppt")
 DEFAULT_SECTION_REPLACER = str(Path(__file__).resolve().parents[2] / "church-worship-ppt" / "scripts" / "ppt_section_replacer.py")
-DEFAULT_ANIMATION_TEMPLATE = "/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/template.pptx"
+DEFAULT_ANIMATION_TEMPLATE = str(DATA_ROOT / "1. 주일오전예배ppt" / "template.pptx")
 
 EMU_PER_INCH = 914400
 VERSE_HEADER_NAMES = ("TextBox 1", "TextBox 8")
@@ -111,7 +112,7 @@ def as_path(path: str) -> Path:
     """Accept WSL paths and simple Windows C:\\ paths."""
     p = path.strip().strip('"')
     m = re.match(r"^([A-Za-z]):[\\/](.*)$", p)
-    if m:
+    if m and os.name != "nt":  # WSL에서 실행할 때만 C:\ 경로를 /mnt/c/로 바꾼다
         drive = m.group(1).lower()
         rest = m.group(2).replace("\\", "/")
         return Path(f"/mnt/{drive}/{rest}")
@@ -270,11 +271,15 @@ def load_section_replacer(path: Path):
     return mod
 
 
+def soffice() -> str:
+    return load_section_replacer(Path(DEFAULT_SECTION_REPLACER)).soffice()
+
+
 def convert_to_pptx(src: Path, out_dir: Path) -> Path:
     if src.suffix.lower() == ".pptx":
         return src
     result = subprocess.run(
-        ["libreoffice", "--headless", "--convert-to", "pptx", "--outdir", str(out_dir), str(src)],
+        [soffice(), "--headless", "--convert-to", "pptx", "--outdir", str(out_dir), str(src)],
         text=True,
         capture_output=True,
     )
@@ -1259,7 +1264,7 @@ def normalize_with_libreoffice(pptx_path: Path, tmp_dir: Path) -> None:
     out_dir = tmp_dir / "normalized"
     out_dir.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
-        ["libreoffice", "--headless", "--convert-to", "pptx", "--outdir", str(out_dir), str(pptx_path)],
+        [soffice(), "--headless", "--convert-to", "pptx", "--outdir", str(out_dir), str(pptx_path)],
         text=True,
         capture_output=True,
     )
@@ -1322,7 +1327,8 @@ def create_generated_sermon_pptx(target: Path, section_name: str, reference: Ref
 
 def replace_section_with_source(target: Path, section_name: str, source: Path, section_replacer_path: Path) -> None:
     cmd = [sys.executable, str(section_replacer_path), "--replace", "--target", str(target), "--section", section_name, "--source", str(source)]
-    result = subprocess.run(cmd, text=True, capture_output=True)
+    # Windows 콘솔 기본 인코딩(cp949) 대신 UTF-8로 주고받아 한글 출력이 깨지지 않게 한다.
+    result = subprocess.run(cmd, encoding="utf-8", capture_output=True, env={**os.environ, "PYTHONUTF8": "1"})
     if result.returncode != 0:
         raise RuntimeError(f"섹션 교체 실패\nCMD: {' '.join(cmd)}\nSTDOUT:{result.stdout}\nSTDERR:{result.stderr}")
     print(result.stdout.strip())

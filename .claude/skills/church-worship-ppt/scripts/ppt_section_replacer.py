@@ -12,7 +12,7 @@
 
   # 제목으로 찬양곡 검색 (퍼지 매칭)
   python3 ppt_section_replacer.py --search \\
-    --folder "/mnt/c/.../5. 찬양곡ppt" \\
+    --folder "C:/.../5. 찬양곡ppt" \\
     --title "호산나"
 
   # PPT 섹션 목록 확인
@@ -35,8 +35,10 @@ import zipfile
 from pathlib import Path
 from urllib.parse import quote, unquote, urljoin, urlparse
 
-TEMPLATE_PATH = "/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/template.pptx"
-OUTPUT_FOLDER = "/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt"
+# 스크립트 위치(.claude/skills/<skill>/scripts/) 기준 저장소 루트 — Windows·WSL 어디서 실행해도 같은 자료를 가리킨다.
+DATA_ROOT = Path(__file__).resolve().parents[4] / "주일 예배자료"
+TEMPLATE_PATH = str(DATA_ROOT / "1. 주일오전예배ppt" / "template.pptx")
+OUTPUT_FOLDER = str(DATA_ROOT / "1. 주일오전예배ppt")
 
 try:
     from pptx import Presentation
@@ -55,10 +57,24 @@ SLIDE_CT   = 'application/vnd.openxmlformats-officedocument.presentationml.slide
 SLIDE_REL  = R_NS + '/slide'
 LAYOUT_REL = R_NS + '/slideLayout'
 
-PRAISE_FOLDER      = "/mnt/c/Oddments_Repository/교회/주일 예배자료/5. 찬양곡ppt"
-HYMN_FOLDER        = "/mnt/c/Oddments_Repository/교회/주일 예배자료/4. 찬송가ppt"
-DOKMUN_FOLDER      = "/mnt/c/Oddments_Repository/교회/주일 예배자료/3. 교독문ppt"
-PRAISE_PREP_FOLDER = "/mnt/c/Oddments_Repository/교회/주일 예배자료/6. 준비찬양"
+PRAISE_FOLDER      = str(DATA_ROOT / "5. 찬양곡ppt")
+HYMN_FOLDER        = str(DATA_ROOT / "4. 찬송가ppt")
+DOKMUN_FOLDER      = str(DATA_ROOT / "3. 교독문ppt")
+PRAISE_PREP_FOLDER = str(DATA_ROOT / "6. 준비찬양")
+
+
+def soffice() -> str:
+    """LibreOffice 실행 파일. Windows는 PATH에 없어도 기본 설치 경로에서 찾는다."""
+    for name in ("soffice", "libreoffice"):
+        found = shutil.which(name)
+        if found:
+            return found
+    for path in (r"C:\Program Files\LibreOffice\program\soffice.exe",
+                 r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"):
+        if os.path.exists(path):
+            return path
+    print("ERROR: LibreOffice(soffice)를 찾을 수 없습니다. 설치: winget install TheDocumentFoundation.LibreOffice")
+    sys.exit(1)
 
 
 def normalize(text: str) -> str:
@@ -274,7 +290,7 @@ def convert_to_pptx(src_path: str, tmp_dir: str) -> str:
         return str(src)
 
     result = subprocess.run(
-        ['libreoffice', '--headless', '--convert-to', 'pptx', str(src), '--outdir', tmp_dir],
+        [soffice(), '--headless', '--convert-to', 'pptx', str(src), '--outdir', tmp_dir],
         capture_output=True, text=True
     )
     converted = Path(tmp_dir) / (src.stem + '.pptx')
@@ -1215,7 +1231,7 @@ def cmd_extract_hwp(args):
         print(f"ERROR: 파일 없음 - {src}")
         sys.exit(1)
 
-    out_dir = args.out_dir or '/tmp/hwp_extract'
+    out_dir = args.out_dir or os.path.join(tempfile.gettempdir(), 'hwp_extract')
     os.makedirs(out_dir, exist_ok=True)
     ext = src.suffix.lower()
 
@@ -1490,7 +1506,7 @@ def main():
     parser.add_argument('--extract-hwp', metavar='파일.hwp(x)', dest='hwp',
                         nargs='?', const='',
                         help='HWP/HWPX에서 이미지 추출 및 페이지·열 배치 출력 (값 생략 시 날짜로 자동 탐색)')
-    parser.add_argument('--out-dir', help='이미지 저장 폴더 (기본: /tmp/hwp_extract)')
+    parser.add_argument('--out-dir', help='이미지 저장 폴더 (기본: 시스템 임시 폴더의 hwp_extract)')
     parser.add_argument('--add-section', action='store_true', help='PPTX에 새 섹션 추가')
     parser.add_argument('--name', help='추가할 섹션 이름')
     parser.add_argument('--copy-from', help='슬라이드를 복사할 기존 섹션 이름')

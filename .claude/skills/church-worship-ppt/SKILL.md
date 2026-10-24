@@ -26,31 +26,30 @@ prompt.txt 경로·날짜 해석 → 주보 확인 → 준비찬양 HWP/HWPX를 
 
 | 항목 | 경로 |
 |------|------|
-| 템플릿 | `/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/template.pptx` |
-| 저장 폴더 | `/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/` |
-| 교독문 자료 | `/mnt/c/Oddments_Repository/교회/주일 예배자료/3. 교독문ppt/` |
-| 찬송가 자료 | `/mnt/c/Oddments_Repository/교회/주일 예배자료/4. 찬송가ppt/` |
-| 찬양곡 자료 | `/mnt/c/Oddments_Repository/교회/주일 예배자료/5. 찬양곡ppt/` |
+| 템플릿 | `C:/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/template.pptx` |
+| 저장 폴더 | `C:/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/` |
+| 교독문 자료 | `C:/Oddments_Repository/교회/주일 예배자료/3. 교독문ppt/` |
+| 찬송가 자료 | `C:/Oddments_Repository/교회/주일 예배자료/4. 찬송가ppt/` |
+| 찬양곡 자료 | `C:/Oddments_Repository/교회/주일 예배자료/5. 찬양곡ppt/` |
 
-표의 `/mnt/c/...`는 WSL 경로다. Windows 도구(Read, PowerShell)에서는 `C:/...`로 바꿔 쓴다.
+스크립트도 저장소 위치를 기준으로 같은 경로를 기본값으로 쓴다.
 
 ## 실행 환경 (Claude Code on Windows)
 
-Claude Code는 Windows에서 실행되고, 스크립트가 쓰는 python-pptx·LibreOffice·pdftoppm·pdfinfo는 WSL에만 설치되어 있다.
+모든 작업을 Windows에서 한다. WSL은 쓰지 않는다.
 
-- **Python 스크립트는 WSL로 실행한다.** 인자 경로도 모두 `/mnt/c/...` 형식으로 넘긴다.
+- **Python 스크립트는 Windows `python`(anaconda, python-pptx 설치됨)에 `-X utf8`을 붙여 실행한다.** 경로는 `C:/...` 그대로 넘긴다. `python3`(msys)에는 python-pptx가 없으므로 쓰지 않는다.
   ```bash
-  MSYS_NO_PATHCONV=1 wsl -e /home/wl/venvs/mybase/bin/python3 \
-    "/mnt/c/Oddments_Repository/교회/.claude/skills/church-worship-ppt/scripts/ppt_section_replacer.py" --search --title "곡제목"
+  python -X utf8 "C:/Oddments_Repository/교회/.claude/skills/church-worship-ppt/scripts/ppt_section_replacer.py" --search --title "곡제목"
   ```
-  - Bash 도구(Git Bash)에서는 `MSYS_NO_PATHCONV=1`이 없으면 `/home/...`이 `C:/Program Files/Git/home/...`으로 바뀌어 실패한다. PowerShell 도구에서는 붙이지 않는다.
-  - 아래 본문에서 `PPT_PY`는 위의 `wsl -e ... ppt_section_replacer.py` 전체 명령을 줄여 쓴 것이다. 셸 변수는 호출 사이에 유지되지 않으므로 매번 전체 명령을 쓴다.
-- **pdfinfo, pdftoppm, LibreOffice 렌더링**도 `wsl -e pdftoppm ...`처럼 WSL에서 실행한다.
+  - 아래 본문에서 `PPT_PY`는 위의 `python -X utf8 ... ppt_section_replacer.py` 전체 명령을 줄여 쓴 것이다. 셸 변수는 호출 사이에 유지되지 않으므로 매번 전체 명령을 쓴다.
+- **LibreOffice**는 스크립트가 Windows 설치본(`C:/Program Files/LibreOffice/program/soffice.exe`)을 자동으로 찾는다. 없으면 `winget install TheDocumentFoundation.LibreOffice`로 설치한다.
+- **PPT 화면 확인**은 `soffice --headless --convert-to pdf --outdir <임시 폴더> <대상.pptx>`로 PDF를 만들고, `pdftoppm -r 60 -png <PDF> <임시 폴더>/page`로 PNG를 만든 뒤 Read 도구로 본다. pdftoppm·pdfinfo는 scoop의 poppler(`scoop install poppler`)로 설치되어 있다. Read 도구에 PDF를 직접 넘기면 세션 시작 시점의 PATH에 따라 실패할 수 있으므로 PNG로 확인한다.
 - **HWP/HWPX → PDF 변환은 PowerShell 도구**로 Windows 한글 COM을 호출한다([hwp-pdf-reading.md](references/hwp-pdf-reading.md)).
 - **주보 이미지와 렌더링한 PDF 페이지는 Read 도구**로 직접 본다(`C:/...` 경로).
 - **웹 검색·브라우징**은 WebSearch/WebFetch 또는 내장 브라우저(`mcp__Claude_Browser__*`)를 쓴다.
 - **설교 구역**은 Skill 도구로 `sermon-title-verse-grass-template`을 이어서 호출한다. 사용자가 두 스킬을 따로 부르지 않아도 된다.
-- **임시 폴더**는 `C:/Oddments_Repository/교회/gitignore/workspace/.build/YYMMDD/`(WSL: `/mnt/c/.../gitignore/workspace/.build/YYMMDD/`)로 한다. `/tmp`나 Claude 스크래치패드에 두지 않는다.
+- **임시 폴더**는 `C:/Oddments_Repository/교회/gitignore/workspace/.build/YYMMDD/`로 한다. `/tmp`나 Claude 스크래치패드에 두지 않는다.
 - 단계가 많으므로 작업 목록(Step 1~6, 설교, 검증, 정리)으로 진행 상황을 추적한다.
 
 ---
@@ -72,7 +71,7 @@ Claude Code는 Windows에서 실행되고, 스크립트가 쓰는 python-pptx·L
 
 - 사용자 시간대(기본 Asia/Seoul)의 현재 날짜로 **오늘보다 뒤에 오는 가장 가까운 일요일**을 계산한다. 일요일이면 반드시 7일 뒤다. 예: 2026-10-17 → 261018, 2026-10-18 → 261025. 명시적 예배 날짜나 다른 날짜 규칙이 있으면 그 지시를 우선한다.
 - 입력의 `YYMMDD`를 모두 같은 예배 날짜로 치환하고, 주보·준비찬양·출력 PPT에 일관되게 적용한다. 실제 날짜가 적힌 경로는 임의로 바꾸지 않는다. 명시한 날짜와 파일 날짜가 충돌하면 확인한다.
-- 입력의 `C:\...` 경로는 Read·PowerShell에서는 그대로, WSL 스크립트에는 `/mnt/c/...`로 바꿔 넘긴다(위 '실행 환경' 참조).
+- 입력의 `C:\...` 경로는 Read·PowerShell·스크립트 모두에 그대로 넘긴다.
 - 두 입력 파일의 실제 존재를 확인한다. 지정 파일이 없으면 해당 폴더에서 같은 날짜·파일명과 확장자 변형을 먼저 찾는다. 그래도 없으면 정확한 누락 경로를 알리고 필요한 입력만 요청한다. 다른 날짜 자료로 대신하거나 명시된 준비찬양을 임의로 생략하지 않는다.
 - 원본 `template.pptx`를 복사해 지정 저장 폴더의 `YYMMDD주일.pptx`를 만든다. `scripts/ppt_section_replacer.py --init --date YYMMDD`에 계산한 날짜를 명시한다. 오늘 날짜가 기본인 `--init` 단독 실행은 사용하지 않는다. 이미 완성본이 있으면 무조건 초기화하지 말고 현재 요청이 생성인지 수정인지 확인한다.
 
@@ -82,7 +81,7 @@ Claude Code는 Windows에서 실행되고, 스크립트가 쓰는 python-pptx·L
 - 입력 경로가 지정돼 있으면 그대로 사용한다. 준비찬양 경로를 생략한 경우에만 고정 폴더 `주일 예배자료/6. 준비찬양/`에서 예배 날짜의 `YYMMDD*.hwp` 또는 `YYMMDD*.hwpx`를 탐색한다. 준비찬양이 없다고 명시한 주는 생략한다.
 - 모든 PDF 페이지를 시각적으로 확인한다. 페이지 번호만 있는 쪽과 빈 쪽은 곡으로 세지 않는다. 텍스트 추출만으로 읽거나 BinData 이미지 저장 순서를 예배 순서로 간주하지 않는다.
 - 준비찬양 PDF와 렌더링 이미지는 `C:/Oddments_Repository/교회/gitignore/workspace/.build/` 아래 작업별 임시 폴더에 만든다. HWP 원본이 있는 자료 폴더나 최종 PPT 저장 폴더에는 만들지 않는다. PDF 변환 테스트도 동일하다. PDF는 PPT 제작을 위한 임시 파일이므로 작업 중에는 유지하고 전체 PPT 작업 완료 후 다른 임시 파일과 함께 삭제한다. 사용자가 PDF 자체를 최종 파일로 보존하라고 명시한 경우에만 예외로 한다.
-- PDF 변환이 불가능하면 `PPT_PY --extract-hwp --out-dir <작업 임시 폴더>`(기본값 `/tmp/hwp_extract`는 쓰지 않는다)는 곡 식별 보조 수단으로만 사용한다. `layout=unknown`의 추출 순서로 곡 순서를 확정하지 않으며, 판독할 수 없는 순서·진행 표시는 필요한 부분만 사용자에게 확인한다.
+- PDF 변환이 불가능하면 `PPT_PY --extract-hwp --out-dir <작업 임시 폴더>`(기본값인 시스템 임시 폴더는 쓰지 않는다)는 곡 식별 보조 수단으로만 사용한다. `layout=unknown`의 추출 순서로 곡 순서를 확정하지 않으며, 판독할 수 없는 순서·진행 표시는 필요한 부분만 사용자에게 확인한다.
 
 ---
 
@@ -212,7 +211,7 @@ PPT_PY \
 
 **스크립트 자동 다운로드 실패 시**: 내장 브라우저(`mcp__Claude_Browser__*`)로 포스트와 첨부 URL을 확인한 뒤 curl로 받는다
 ```bash
-curl -L "https://..." -o "/mnt/c/Oddments_Repository/교회/주일 예배자료/5. 찬양곡ppt/곡제목.ppt"
+curl -L "https://..." -o "C:/Oddments_Repository/교회/주일 예배자료/5. 찬양곡ppt/곡제목.ppt"
 ```
 
 **3단계. 티스토리에도 없으면 사용자에게 알림 후 대기**
@@ -220,7 +219,7 @@ curl -L "https://..." -o "/mnt/c/Oddments_Repository/교회/주일 예배자료/
 ```
 "[곡 제목] 파일을 티스토리에서도 찾지 못했습니다.
 파일을 직접 아래 폴더에 저장해주세요:
-/mnt/c/Oddments_Repository/교회/주일 예배자료/5. 찬양곡ppt/
+C:/Oddments_Repository/교회/주일 예배자료/5. 찬양곡ppt/
 저장 완료 후 알려주시면 계속 진행하겠습니다."
 ```
 
@@ -250,7 +249,7 @@ curl -L "https://..." -o "/mnt/c/Oddments_Repository/교회/주일 예배자료/
 ```bash
 PPT_PY \
   --replace \
-  --target "/mnt/c/.../YYMMDD주일.pptx" \
+  --target "C:/.../YYMMDD주일.pptx" \
   --section "준비찬양 1" --source "찬양A.ppt" --source "찬양B.ppt" \
   --section "준비찬양 2" --source "찬양C.ppt" --source "찬양D.ppt" \
   --section "준비찬양 3" --source "찬양E.ppt" --source "찬양F.ppt" \
@@ -265,7 +264,7 @@ PPT_PY \
 - 준비찬양이 없는 주는 `--section "준비찬양 *"` 항목을 생략한다.
 
 스크립트 내부 동작:
-1. `.ppt` 파일은 LibreOffice로 임시 `.pptx`로 변환 (`libreoffice --headless --convert-to pptx`)
+1. `.ppt` 파일은 LibreOffice로 임시 `.pptx`로 변환 (`soffice --headless --convert-to pptx`)
 2. 대상 PPT에서 `p14:sectionLst` XML로 섹션 경계(슬라이드 ID 목록) 파악
 3. 해당 섹션의 기존 슬라이드 전체 제거
 4. 소스 파일의 슬라이드를 동일 위치에 삽입
@@ -282,7 +281,7 @@ PPT_PY \
 
 ## 작업 완료 후 정리 (필수)
 
-- 최종 PPT는 지정된 예배 PPT 저장 폴더(`C:/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/`, WSL: `/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/`)에 저장한다. 사용자가 별도 최종 경로를 지정하면 그 경로를 따른다.
+- 최종 PPT는 지정된 예배 PPT 저장 폴더(`C:/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/`)에 저장한다. 사용자가 별도 최종 경로를 지정하면 그 경로를 따른다.
 - 임시 산출물은 작업별 임시 폴더에 모으고 생성 경로를 기록한다. 변환 PPTX, 후렴 추출본, PDF, 검사용 이미지, 임시 실행 스크립트, 작업 사본, 백업은 최종 산출물이 아니다.
 - 최종 파일의 저장과 무결성·내용·화면 검증을 마친 뒤, 이번 작업에서 만든 임시 파일·작업 사본·백업을 모두 삭제한다. 백업도 남기지 않는다. 작업 사본을 최종 경로로 복사했다면 두 파일의 해시가 같은지 확인한 후 사본을 삭제한다.
 - `prompt.txt`, 스킬 폴더와 그 안의 지침·스크립트·리소스, 원본 템플릿, 주보·준비찬양 HWP·성경·찬양 자료, 지정 경로의 최종 PPT는 정리 대상으로 삼지 않는다. 기존의 다른 작업 파일도 임의로 삭제하지 않는다.
@@ -295,7 +294,7 @@ PPT_PY \
 완성된 파일 경로와 섹션별 슬라이드 수 변화를 보여준다:
 
 ```
-완료: /mnt/c/.../260329주일.pptx
+완료: C:/.../260329주일.pptx
 교독문:  4장 → 4장 (교독문_129)
 찬양 1: 16장 → 16장 (새찬송가_150장)
 찬양 2: 20장 → 12장 (새찬송가_147장)
@@ -307,6 +306,6 @@ PPT_PY \
 ## 참고 사항
 
 - `template.pptx` 원본은 절대 수정하지 않는다
-- `.ppt` 변환에는 WSL의 LibreOffice를 쓴다(이미 설치됨). Windows에는 LibreOffice가 없으므로 스크립트를 Windows Python으로 직접 돌리지 않는다.
+- `.ppt` 변환에는 Windows에 설치된 LibreOffice를 쓴다. LibreOffice 창이 열려 있으면 headless 변환이 조용히 실패할 수 있으니, 실패하면 열린 창부터 확인한다.
 - 자료 파일을 못 찾으면 해당 섹션은 건너뛰고 사용자에게 알린다
 - 섹션명은 PPT 파일 내 `p14:sectionLst` 기준이며, 현재 섹션명: `교독문`, `찬양 1`, `찬양 2`

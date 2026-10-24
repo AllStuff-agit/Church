@@ -28,18 +28,18 @@ description: 교회 예배 PPT의 `설교` 섹션만 수정하여 주보의 설�
 
 ## 고정 경로
 
-- 성경 PPT 루트: `/mnt/c/Oddments_Repository/교회/주일 예배자료/2. 개역개정성경ppt`
-- 예배 PPT 기본 저장 폴더: `/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/`
-- 실행 스크립트: `/mnt/c/Oddments_Repository/교회/.claude/skills/sermon-title-verse-grass-template/scripts/sermon_grass_replacer.py`
-- 위 경로는 WSL 경로다. Windows 도구(Read, PowerShell)에서는 `C:/...`로 바꿔 쓴다.
+- 성경 PPT 루트: `C:/Oddments_Repository/교회/주일 예배자료/2. 개역개정성경ppt`
+- 예배 PPT 기본 저장 폴더: `C:/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/`
+- 실행 스크립트: `C:/Oddments_Repository/교회/.claude/skills/sermon-title-verse-grass-template/scripts/sermon_grass_replacer.py`
+- 스크립트도 저장소 위치를 기준으로 위 경로를 기본값으로 쓴다.
 
 ## 실행 환경 (Claude Code on Windows)
 
-- python-pptx·LibreOffice·pdftoppm은 WSL에만 있으므로 스크립트와 렌더링 명령은 `wsl -e`로 실행하고 인자 경로는 `/mnt/c/...`로 넘긴다.
-- Bash 도구(Git Bash)에서는 앞에 `MSYS_NO_PATHCONV=1`을 붙인다. 없으면 `/home/...` 경로가 Git 설치 경로로 바뀌어 실패한다. PowerShell 도구에서는 붙이지 않는다.
+- 모든 작업을 Windows에서 한다. 스크립트는 Windows `python`(anaconda)에 `-X utf8`을 붙여 실행하고, 경로는 `C:/...` 그대로 넘긴다.
+- LibreOffice는 스크립트가 Windows 설치본을 자동으로 찾는다(`../church-worship-ppt/SKILL.md`의 '실행 환경' 참조).
 - 섹션 교체 헬퍼는 같은 skills 폴더의 `church-worship-ppt/scripts/ppt_section_replacer.py`를 자동으로 찾는다(`--section-replacer`로 바꿀 수 있음).
 - 렌더링한 화면은 Read 도구로 직접 확인한다.
-- 임시 폴더는 `C:/Oddments_Repository/교회/gitignore/workspace/.build/YYMMDD/`(WSL: `/mnt/c/Oddments_Repository/교회/gitignore/workspace/.build/YYMMDD/`)를 쓴다. `/tmp`는 쓰지 않는다.
+- 임시 폴더는 `C:/Oddments_Repository/교회/gitignore/workspace/.build/YYMMDD/`를 쓴다. `/tmp`는 쓰지 않는다.
 
 ## 사용 절차
 
@@ -50,9 +50,9 @@ description: 교회 예배 PPT의 `설교` 섹션만 수정하여 주보의 설�
 3. 아래 스크립트로 `설교` 섹션만 교체한다.
 
 ```bash
-MSYS_NO_PATHCONV=1 wsl -e /home/wl/venvs/mybase/bin/python3 \
-  "/mnt/c/Oddments_Repository/교회/.claude/skills/sermon-title-verse-grass-template/scripts/sermon_grass_replacer.py" \
-  --target "/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/260615월.pptx" \
+python -X utf8 \
+  "C:/Oddments_Repository/교회/.claude/skills/sermon-title-verse-grass-template/scripts/sermon_grass_replacer.py" \
+  --target "C:/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/260615월.pptx" \
   --reference "사사기 4:1-10" \
   --title "절망의 밤에 세우신 사람 드보라"
 ```
@@ -83,26 +83,27 @@ MSYS_NO_PATHCONV=1 wsl -e /home/wl/venvs/mybase/bin/python3 \
 작업 후 반드시 확인한다.
 
 ```bash
-MSYS_NO_PATHCONV=1 wsl -e unzip -t "/mnt/c/.../대상.pptx"
-python - <<'PY'  # Windows python(anaconda)에도 python-pptx가 있다
+python -X utf8 - <<'PY'
+import zipfile
 from pptx import Presentation
 p = 'C:/.../대상.pptx'
+assert zipfile.ZipFile(p).testzip() is None
 prs = Presentation(p)
 print(len(prs.slides), prs.slide_width, prs.slide_height)
 PY
 ```
 
-필요하면 PDF 렌더링으로 설교 섹션 화면을 확인한다.
+필요하면 PDF로 변환하고 PNG로 렌더링해 설교 섹션 화면을 Read 도구로 확인한다.
 
 ```bash
-MSYS_NO_PATHCONV=1 wsl -e libreoffice --headless --convert-to pdf \
-  --outdir "/mnt/c/Oddments_Repository/교회/gitignore/workspace/.build/YYMMDD/sermon-check" "/mnt/c/.../대상.pptx"
-MSYS_NO_PATHCONV=1 wsl -e pdftoppm -r 60 -png ".../sermon-check/대상.pdf" ".../sermon-check/page"
+"C:/Program Files/LibreOffice/program/soffice.exe" --headless --convert-to pdf \
+  --outdir "C:/Oddments_Repository/교회/gitignore/workspace/.build/YYMMDD/sermon-check" "C:/.../대상.pptx"
+pdftoppm -r 60 -png ".../sermon-check/대상.pdf" ".../sermon-check/page"
 ```
 
 ## 작업 완료 후 정리 (필수)
 
-- 최종 PPT는 지정된 예배 PPT 저장 폴더(`C:/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/`, WSL: `/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/`)에 저장한다. 사용자가 별도 최종 경로를 지정하면 그 경로를 따른다.
+- 최종 PPT는 지정된 예배 PPT 저장 폴더(`C:/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/`)에 저장한다. 사용자가 별도 최종 경로를 지정하면 그 경로를 따른다.
 - 임시 산출물은 작업별 임시 폴더에 모으고 생성 경로를 기록한다. 변환 PPTX, 후렴 추출본, PDF, 검사용 이미지, 임시 실행 스크립트, 작업 사본, 백업은 최종 산출물이 아니다.
 - 최종 파일의 저장과 무결성·내용·화면 검증을 마친 뒤, 이번 작업에서 만든 임시 파일·작업 사본·백업을 모두 삭제한다. 백업도 남기지 않는다. 작업 사본을 최종 경로로 복사했다면 두 파일의 해시가 같은지 확인한 후 사본을 삭제한다.
 - `prompt.txt`, 스킬 폴더와 그 안의 지침·스크립트·리소스, 원본 템플릿, 주보·준비찬양 HWP·성경·찬양 자료, 지정 경로의 최종 PPT는 정리 대상으로 삼지 않는다. 기존의 다른 작업 파일도 임의로 삭제하지 않는다.
