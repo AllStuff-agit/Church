@@ -34,7 +34,7 @@ P14_EXT_URI = "{521415D9-36F7-43E2-AB2F-B90AF26B5E84}"
 NS = {"p": PML_NS, "p14": P14_NS}
 
 DEFAULT_BIBLE_ROOT = "/mnt/c/Oddments_Repository/교회/주일 예배자료/2. 개역개정성경ppt"
-DEFAULT_SECTION_REPLACER = "/home/wl/workspace/playground/sandbox/.codex/skills/church-worship-ppt/scripts/ppt_section_replacer.py"
+DEFAULT_SECTION_REPLACER = str(Path(__file__).resolve().parents[2] / "church-worship-ppt" / "scripts" / "ppt_section_replacer.py")
 DEFAULT_ANIMATION_TEMPLATE = "/mnt/c/Oddments_Repository/교회/주일 예배자료/1. 주일오전예배ppt/template.pptx"
 
 EMU_PER_INCH = 914400
