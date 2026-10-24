@@ -1,0 +1,11 @@
+/church-worship-ppt
+
+## 주보
+"C:\Users\USER\Downloads\KakaoTalk\샘솟는주보\YYMMDD주보.jpg"
+
+## 준비찬양
+"C:\Oddments_Repository\교회\주일 예배자료\6. 준비찬양\YYMMDD오전.hwp"
+
+## 참고사항
+오늘을 기준으로 다음에 오는 일요일 날짜를 YYMMDD 형식으로 넣는다.
+오늘이 일요일이면 7일 뒤 날짜를 사용한다.
