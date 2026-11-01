@@ -109,6 +109,61 @@ def convert_to_pptx(src_path: str, tmp_dir: str) -> str:
 
 
 
+A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+_PART_RE = re.compile(r'ppt/(slides/slide|slideLayouts/slideLayout|slideMasters/slideMaster)\d+\.xml$')
+
+
+def _scale_part(root, s: float, dx: int, dy: int):
+    """슬라이드·레이아웃·마스터 XML 하나를 배율 s로 키우고 (dx, dy)만큼 옮긴다."""
+    sp_tree = root.find(f'.//{{{PML_NS}}}spTree')
+    for xfrm in list(root.iter(f'{{{A_NS}}}xfrm', f'{{{PML_NS}}}xfrm')):
+        # 묶음 안 도형은 묶음 좌표계라 그대로 둔다(묶음 틀만 키우면 따라 커짐)
+        # 도형 = graphicFrame이면 바로 위, 아니면 spPr/grpSpPr 한 칸 더 위
+        shape = xfrm.getparent() if xfrm.tag == f'{{{PML_NS}}}xfrm' else xfrm.getparent().getparent()
+        if sp_tree is None or shape is None or shape is sp_tree:
+            continue
+        above = list(shape.iterancestors())
+        if sp_tree not in above or any(a.tag == f'{{{PML_NS}}}grpSp' for a in above[:above.index(sp_tree)]):
+            continue
+        off, ext = xfrm.find(f'{{{A_NS}}}off'), xfrm.find(f'{{{A_NS}}}ext')
+        if off is not None:
+            off.set('x', str(round(int(off.get('x')) * s) + dx))
+            off.set('y', str(round(int(off.get('y')) * s) + dy))
+        if ext is not None:
+            ext.set('cx', str(round(int(ext.get('cx')) * s)))
+            ext.set('cy', str(round(int(ext.get('cy')) * s)))
+    scaled = [('rPr', 'sz'), ('defRPr', 'sz'), ('endParaRPr', 'sz'), ('spcPts', 'val'), ('ln', 'w'),
+              ('bodyPr', 'lIns'), ('bodyPr', 'tIns'), ('bodyPr', 'rIns'), ('bodyPr', 'bIns'),
+              ('gridCol', 'w'), ('tr', 'h')]
+    for tag, attr in scaled:
+        for el in root.iter(f'{{{A_NS}}}{tag}'):
+            if el.get(attr) is not None:
+                el.set(attr, str(round(int(el.get(attr)) * s)))
+
+
+def fit_slide_size(pptx_path: str, width: int, height: int):
+    """슬라이드 크기를 width×height로 바꾸고 내용을 같은 비율로 키워 가운데 둔다.
+    곡 파일(25.4cm 폭 16:9)을 테마(33.867cm 폭)에 끼우면 내용이 왼쪽 위에 몰리는 것을 막는다."""
+    files = _load_zip(pptx_path)
+    prs_xml = etree.fromstring(files['ppt/presentation.xml'])
+    sz = prs_xml.find(f'{{{PML_NS}}}sldSz')
+    w, h = int(sz.get('cx')), int(sz.get('cy'))
+    if (w, h) == (width, height):
+        return
+    s = min(width / w, height / h)
+    dx, dy = round((width - w * s) / 2), round((height - h * s) / 2)
+    for name in files:
+        if _PART_RE.match(name):
+            root = etree.fromstring(files[name])
+            _scale_part(root, s, dx, dy)
+            files[name] = etree.tostring(root, xml_declaration=True, encoding='UTF-8', standalone=True)
+    sz.set('cx', str(width))
+    sz.set('cy', str(height))
+    sz.attrib.pop('type', None)
+    files['ppt/presentation.xml'] = etree.tostring(prs_xml, xml_declaration=True, encoding='UTF-8', standalone=True)
+    _write_zip(pptx_path, files)
+
+
 def _load_zip(path: str) -> dict:
     files = {}
     with zipfile.ZipFile(path, 'r') as z:

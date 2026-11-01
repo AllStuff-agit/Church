@@ -170,6 +170,7 @@ def assemble(structure_path, theme_path, content: dict, out_path, hymn_dir: Path
         lst.append(elems[i])
     slides.delete_slides(prs, list(range(len(order) - n_samples, len(order))))
     slides.set_sections(prs, [(name, len(g)) for (_, name, _), g in zip(plan, groups)])
+    size = (prs.slide_width, prs.slide_height)
     prs.save(str(out_path))
 
     # 찬송·준비찬양 끼우기
@@ -187,7 +188,14 @@ def assemble(structure_path, theme_path, content: dict, out_path, hymn_dir: Path
                     srcs.insert(0, str(extract_slides(Path(full), chorus, Path(tmp) / f"후렴_{k}.pptx")))
             else:
                 continue
-            rep.replace_section_zip(str(out_path), name, [rep.convert_to_pptx(s, tmp) for s in srcs], tmp)
+            pptxs = []
+            for j, s in enumerate(srcs):
+                f = Path(rep.convert_to_pptx(s, tmp))
+                if Path(tmp) not in f.parents:  # .pptx 원본은 그대로 돌아오므로 사본을 고친다
+                    f = Path(shutil.copy(f, Path(tmp) / f"사본_{k}_{j}.pptx"))
+                rep.fit_slide_size(str(f), *size)  # 곡 파일은 대개 25.4cm 폭이라 테마 크기로 키운다
+                pptxs.append(str(f))
+            rep.replace_section_zip(str(out_path), name, pptxs, tmp)
     return out_path
 
 
