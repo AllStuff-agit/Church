@@ -93,7 +93,8 @@ def layout(glyphs: list, base: dict = BASE) -> list:
     _, a, b = best
     factor = min(1.0, avail / best[0])
     gap = base["h"] * factor * 0.55
-    return _place(a, base, factor, -gap) + _place(b, base, factor, gap)
+    lift = base["h"] * factor * 0.25  # 둘째 줄이 아래 장식에 닿지 않게 조금 올림
+    return _place(a, base, factor, -gap - lift) + _place(b, base, factor, gap - lift)
 
 
 def _set_text(shape, text: str) -> None:
@@ -145,6 +146,8 @@ def fill_cover(prs, slide_index: int, reference: str, title: str, base: dict = B
     quotes = find_shape(group, "따옴표")
     if quotes is not None:
         lq, rq = find_shape(quotes, "따옴표-left"), find_shape(quotes, "따옴표-right")
-        first, last = rects[0], max(rects, key=lambda r: r[0] + r[2])
-        _move(lq._element, max(0, first[0] - lq.width - base["w"] * 0.1), lq.top)
-        _move(rq._element, last[0] + last[2] + base["w"] * 0.1, rq.top)
+        left = min(r[0] for r in rects)          # 두 줄이면 더 긴 줄 기준으로 감싼다
+        right = max(r[0] + r[2] for r in rects)
+        top = min(r[1] for r in rects) - base["h"] * 0.1
+        _move(lq._element, max(0, left - lq.width - base["w"] * 0.1), min(lq.top, top))
+        _move(rq._element, right + base["w"] * 0.1, min(rq.top, top))

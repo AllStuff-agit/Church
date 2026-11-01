@@ -9,7 +9,7 @@ from pptx import Presentation
 
 import slides
 from fill import split_tail, split_verse
-from sources import display_reference, load_gyodokmun, load_verses, parse_reference
+from sources import display_reference, load_gyodokmun, load_verses, parse_reference, verse_label
 from theme import find_shape
 
 LO_PROFILE = "file:///" + str(Path.home() / "AppData/Local/Temp/worship_ppt_lo").replace("\\", "/")
@@ -52,8 +52,9 @@ def verify(pptx: Path, content: dict) -> list:
         for p in passages:
             unit = "편" if p.book == "시편" else "장"
             for n, text in load_verses(p):
-                for piece in split_verse(n, text):
-                    expected.append((f"{p.book} {p.chapter}{unit} {n}절", piece))
+                label = verse_label(p.book, p.chapter, n)
+                for piece in split_verse(label, text):
+                    expected.append((f"{p.book} {p.chapter}{unit} {label}절", piece))
         got = [find_shape(prs.slides[i], "구절본문").text_frame.text for i in _kind_indices(prs, "말씀구절")]
         if got or _kind_indices(prs, "말씀구절"):
             for k in range(max(len(expected), len(got))):
@@ -94,7 +95,7 @@ def _coverage(passages, slide_texts) -> list:
     묶음 절(예: 18-19)은 첫 절 번호로 시작하는 장이 있으면 함께 있는 것으로 본다."""
     from sources import _books
 
-    heads = {int(m.group(1)) for t in slide_texts if (m := re.match(r"(\d+) ", _norm(t)))}
+    heads = {int(m.group(1)) for t in slide_texts if (m := re.match(r"(\d+)(?:-\d+)? ", _norm(t)))}
     out = []
     for p in passages:
         unit = "편" if p.book == "시편" else "장"

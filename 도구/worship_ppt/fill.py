@@ -149,13 +149,13 @@ def split_verse(number: int, text: str, max_chars: int = VERSE_MAX_CHARS) -> lis
 
 def fill_verses(prs, slide_index: int, passages: list, max_chars: int = VERSE_MAX_CHARS) -> list:
     """말씀구절 견본을 절(조각)마다 한 장씩 채운다. 견본 자신이 첫 장."""
-    from sources import load_verses  # 순환 import 피함
+    from sources import load_verses, verse_label  # 순환 import 피함
 
     pieces = []
     for p in passages:
         unit = "편" if p.book == "시편" else "장"
         for number, text in load_verses(p):
-            for piece in split_verse(number, text, max_chars):
+            for piece in split_verse(verse_label(p.book, p.chapter, number), text, max_chars):
                 pieces.append((f"{p.book} {p.chapter}{unit}", piece))
     targets = [slide_index] + [slides.duplicate_slide(prs, slide_index) for _ in pieces[1:]]
     for idx, (chapter, piece) in zip(targets, pieces):

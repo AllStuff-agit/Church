@@ -140,6 +140,15 @@ def load_verses(p: Passage) -> list:
     return out
 
 
+def verse_label(book: str, chapter: int, verse: int) -> str:
+    """절 번호 표기. 원본에서 여러 절이 한 문장으로 묶였으면 '18-19'."""
+    verses = _chapter(book, chapter)
+    end = verse
+    while verses.get(end + 1) == "":
+        end += 1
+    return f"{verse}-{end}" if end != verse else f"{verse}"
+
+
 def display_reference(ps: list) -> str:
     parts = []
     for p in ps:

@@ -52,6 +52,20 @@ class LayoutTest(unittest.TestCase):
             self.assertNotEqual(first_line[-1].word, next_g.word)
 
 
+class QuoteTest(unittest.TestCase):
+    def test_quotes_wrap_two_lines(self):
+        prs = Presentation(str(THEME))
+        idx = kind_slides(prs)["본문표지"][0]
+        fill_cover(prs, idx, "시편 23편 1-6절", "여호와는 나의 목자시니 내게 부족함이 없으리로다")
+        group = find_shape(prs.slides[idx], "본문 타이틀")
+        letters = [sh for sh in group.shapes if sh.name.startswith("설교제목글자")]
+        left = min(sh.left for sh in letters)
+        right = max(sh.left + sh.width for sh in letters)
+        lq, rq = find_shape(group, "따옴표-left"), find_shape(group, "따옴표-right")
+        self.assertLessEqual(lq.left + lq.width, left)
+        self.assertGreaterEqual(rq.left, right)
+
+
 class FillCoverTest(unittest.TestCase):
     def test_fill(self):
         prs = Presentation(str(THEME))

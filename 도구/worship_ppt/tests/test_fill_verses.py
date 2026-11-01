@@ -59,6 +59,10 @@ class FillVersesTest(unittest.TestCase):
         self.assertEqual(self._text(out[3], "구절장"), "요한복음 12장")
         self.assertTrue(self._text(out[3], "구절본문").startswith("12 "))
 
+    def test_bundle_label(self):
+        out = fill_verses(self.prs, self.sample, parse_reference("신 6:19-20"))
+        self.assertTrue(self._text(out[0], "구절본문").startswith("18-19 여호와께서"))
+
     def test_psalm_unit(self):
         out = fill_verses(self.prs, self.sample, parse_reference("시 23:1"))
         self.assertEqual(self._text(out[0], "구절장"), "시편 23편")

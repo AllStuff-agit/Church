@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from sources import Passage, SourceError, display_reference, load_gyodokmun, load_verses, parse_reference
+from sources import Passage, SourceError, display_reference, load_gyodokmun, load_verses, parse_reference, verse_label
 
 
 class GyodokmunTest(unittest.TestCase):
@@ -48,6 +48,11 @@ class VerseTest(unittest.TestCase):
         vs = load_verses(Passage("신명기", 6, 19, 20))
         self.assertEqual([n for n, _ in vs], [18, 20])
         self.assertIn("여호와께서 보시기에 정직하고 선량한 일을 행하라", vs[0][1])
+
+    def test_verse_label(self):
+        self.assertEqual(verse_label("신명기", 6, 18), "18-19")
+        self.assertEqual(verse_label("신명기", 6, 20), "20")
+        self.assertEqual(verse_label("시편", 92, 1), "1-3")
 
     def test_missing_verse(self):
         with self.assertRaisesRegex(SourceError, "민수기 31장 60절"):
