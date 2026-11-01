@@ -27,9 +27,22 @@ def find_shape(slide_or_group, name: str):
     return None
 
 
+def kind_slides(prs) -> dict:
+    """섹션 이름 → 그 섹션의 슬라이드 인덱스 목록(교독문은 표지 장 + 본문 장)."""
+    return {name: idx for name, idx in slides.sections(prs) if idx}
+
+
 def find_kind_slides(prs) -> dict:
     """섹션 이름 → 그 섹션 첫 장 인덱스."""
-    return {name: idx[0] for name, idx in slides.sections(prs) if idx}
+    return {name: idx[0] for name, idx in kind_slides(prs).items()}
+
+
+def slide_with(prs, kind: str, box: str):
+    """kind 섹션에서 box 상자가 있는 첫 장의 인덱스. 없으면 None."""
+    for i in kind_slides(prs).get(kind, []):
+        if find_shape(prs.slides[i], box) is not None:
+            return i
+    return None
 
 
 def validate_theme(path: Path, kinds: list) -> list:
@@ -40,10 +53,9 @@ def validate_theme(path: Path, kinds: list) -> list:
         if kind not in found:
             problems.append(f"이 테마에는 {kind} 슬라이드가 없습니다")
             continue
-        slide = prs.slides[found[kind]]
         for box in REQUIRED_BOXES[kind]:
-            if find_shape(slide, box) is None:
+            if slide_with(prs, kind, box) is None:
                 problems.append(f"{kind} 슬라이드에 '{box}' 상자가 없습니다")
-        if kind == "본문표지" and find_shape(slide, TITLE_BOX) is None and find_shape(slide, TITLE_GROUP) is None:
+        if kind == "본문표지" and slide_with(prs, kind, TITLE_BOX) is None and slide_with(prs, kind, TITLE_GROUP) is None:
             problems.append(f"본문표지 슬라이드에 '{TITLE_BOX}' 상자나 '{TITLE_GROUP}' 묶음이 없습니다")
     return problems
