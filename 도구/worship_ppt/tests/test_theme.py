@@ -33,6 +33,16 @@ class ThemeTest(unittest.TestCase):
         path = make_mini_theme(self.dir / "t.pptx", rename=("구절장", "다른이름"))
         self.assertEqual(validate_theme(path, list(THEME_KINDS)), ["말씀구절 슬라이드에 '구절장' 상자가 없습니다"])
 
+    def test_gyodokmun_body_needs_four_sample_paragraphs(self):
+        path = make_mini_theme(self.dir / "t.pptx")
+        prs = Presentation(path)
+        body = find_shape(prs.slides[kind_slides(prs)["교독문"][-1]], "교독문본문")
+        for para in body.text_frame.paragraphs[2:]:
+            para._p.getparent().remove(para._p)
+        prs.save(path)
+        self.assertEqual(validate_theme(path, list(THEME_KINDS)),
+                         ["교독문본문 견본 문단은 인도·회중·(다같이)·다같이 4개여야 합니다(지금 2개)"])
+
     def test_boxes_on_second_slide_of_section(self):
         # 교독문 섹션: 표지 장 + 본문 장. 본문 상자가 두 번째 장에 있어도 통과해야 함
         path = make_mini_theme(self.dir / "t.pptx", cover=True)

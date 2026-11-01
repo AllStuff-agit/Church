@@ -56,6 +56,11 @@ def validate_theme(path: Path, kinds: list) -> list:
         for box in REQUIRED_BOXES[kind]:
             if slide_with(prs, kind, box) is None:
                 problems.append(f"{kind} 슬라이드에 '{box}' 상자가 없습니다")
+        body = slide_with(prs, kind, "교독문본문") if kind == "교독문" else None
+        if body is not None:
+            n = len(find_shape(prs.slides[body], "교독문본문").text_frame.paragraphs)
+            if n < 4:
+                problems.append(f"교독문본문 견본 문단은 인도·회중·(다같이)·다같이 4개여야 합니다(지금 {n}개)")
         if kind == "본문표지" and slide_with(prs, kind, TITLE_BOX) is None and slide_with(prs, kind, TITLE_GROUP) is None:
             problems.append(f"본문표지 슬라이드에 '{TITLE_BOX}' 상자나 '{TITLE_GROUP}' 묶음이 없습니다")
     return problems

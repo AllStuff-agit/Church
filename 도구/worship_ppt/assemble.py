@@ -217,6 +217,9 @@ def main(argv=None):
     s.add_argument("제목")
     d = sub.add_parser("download", help="티스토리에서 16:9(_Wide) 곡 내려받기(없으면 종료 코드 2)")
     d.add_argument("제목")
+    t = sub.add_parser("check-theme", help="테마 템플릿 점검(문제 있으면 종료 코드 1)")
+    t.add_argument("테마")
+    t.add_argument("--구조", help="이 구조에 쓰이는 종류만 점검(기본: 9종 모두)")
     f = sub.add_parser("fix-background", help="흰 바탕 악보 섹션에 다른 섹션 배경 넣기")
     f.add_argument("파일")
     f.add_argument("--섹션", required=True, action="append")
@@ -241,6 +244,14 @@ def main(argv=None):
             sys.exit(2)
         print(f"DOWNLOADED: {got}\nBEST_MATCH: {got}")
         return
+    if args.cmd == "check-theme":
+        kinds = [it.kind for it in parse_structure(Path(args.구조))] if args.구조 else list(THEME_KINDS)
+        prs = Presentation(args.테마)
+        for name, idx in slides.sections(prs):
+            print(f"  {name}: {len(idx)}장")
+        problems = validate_theme(Path(args.테마), kinds)
+        print("테마 점검: 문제 없음" if not problems else "테마 점검: 고칠 곳 있음\n- " + "\n- ".join(problems))
+        sys.exit(1 if problems else 0)
     if args.cmd == "fix-background":
         from background import fix_section_background
         for sec in args.섹션:
