@@ -202,8 +202,40 @@ def main(argv=None):
     v = sub.add_parser("verify")
     v.add_argument("파일")
     v.add_argument("--내용", required=True)
+    s = sub.add_parser("search", help="1_자료/찬양곡에서 곡 찾기(없으면 종료 코드 2)")
+    s.add_argument("제목")
+    d = sub.add_parser("download", help="티스토리에서 16:9(_Wide) 곡 내려받기(없으면 종료 코드 2)")
+    d.add_argument("제목")
+    f = sub.add_parser("fix-background", help="흰 바탕 악보 섹션에 다른 섹션 배경 넣기")
+    f.add_argument("파일")
+    f.add_argument("--섹션", required=True, action="append")
+    f.add_argument("--배경", required=True)
     args = ap.parse_args(argv)
-    from check import render, verify
+    import check
+    import songs
+
+    if args.cmd == "search":
+        found = songs.search_file(songs.SONG_DIR, args.제목)
+        if not found:
+            print(f"NOT_FOUND: '{args.제목}' (폴더: {songs.SONG_DIR})")
+            sys.exit(2)
+        for i, r in enumerate(found, 1):
+            print(f"  {'★' if r['score'] == 2 else '○'} [{i}] {r['file'].name}")
+        print(f"BEST_MATCH: {found[0]['file']}")
+        return
+    if args.cmd == "download":
+        got = songs.tistory_download(args.제목, str(songs.SONG_DIR))
+        if not got:
+            print(f"NOT_FOUND: 티스토리에 '{args.제목}' 16:9(_Wide) 파일이 없습니다. 직접 {songs.SONG_DIR}에 넣어 주세요.")
+            sys.exit(2)
+        print(f"DOWNLOADED: {got}\nBEST_MATCH: {got}")
+        return
+    if args.cmd == "fix-background":
+        from background import fix_section_background
+        for sec in args.섹션:
+            print(f"  [{sec}] 배경 보완 {fix_section_background(args.파일, sec, args.배경)}장 (배경: {args.배경})")
+        return
+    render, verify = check.render, check.verify
 
     if args.cmd == "render":
         out_dir = Path(args.폴더) if args.폴더 else Path(tempfile.mkdtemp(prefix="worship_render_"))
@@ -222,6 +254,8 @@ def main(argv=None):
         print(f"  {name}: {len(idx)}장")
     problems = verify(out, content)
     print("대조 결과: 원본과 일치" if not problems else "대조 결과: 다른 곳 있음\n- " + "\n- ".join(problems))
+    if problems:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
