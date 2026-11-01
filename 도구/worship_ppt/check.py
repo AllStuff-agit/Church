@@ -111,11 +111,11 @@ def _coverage(passages, slide_texts) -> list:
 
 def render(pptx: Path, out_dir: Path, dpi: int = 40) -> Path:
     """장별 PNG와 장 번호를 붙인 모아보기 sheet.png를 만들고 그 경로를 돌려준다."""
-    from assemble import _replacer
+    from insert import soffice
 
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    subprocess.run([_replacer().soffice(), f"-env:UserInstallation={LO_PROFILE}", "--headless",
+    subprocess.run([soffice(), f"-env:UserInstallation={LO_PROFILE}", "--headless",
                     "--convert-to", "pdf", "--outdir", str(out_dir), str(pptx)], capture_output=True)
     pdf = out_dir / (Path(pptx).stem + ".pdf")
     if not pdf.exists():

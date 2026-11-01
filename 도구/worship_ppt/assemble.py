@@ -5,7 +5,6 @@
       --테마 2_템플릿/테마/테마-초록잎들꽃.pptx --내용 내용.json [--출력 경로]
 """
 import argparse
-import importlib.util
 import json
 import shutil
 import sys
@@ -25,14 +24,6 @@ from theme import kind_slides, validate_theme
 from title import fill_cover
 
 HYMN_DIR = REPO / "1_자료" / "찬송가"
-REPLACER = REPO / ".claude/skills/church-worship-ppt/scripts/ppt_section_replacer.py"
-
-
-def _replacer():
-    spec = importlib.util.spec_from_file_location("ppt_section_replacer", REPLACER)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
 
 
 def hymn_path(n: int, hymn_dir: Path) -> Path | None:
@@ -146,7 +137,7 @@ def assemble(structure_path, theme_path, content: dict, out_path, hymn_dir: Path
     prs.save(str(out_path))
 
     # 찬송·준비찬양 끼우기
-    rep = _replacer()
+    import insert as rep
     hymns = iter(_hymn_numbers(items, content))
     with tempfile.TemporaryDirectory() as tmp:
         for it, name in zip(items, names):
