@@ -80,10 +80,41 @@ def check_inputs(items, theme_path, content: dict, hymn_dir: Path = HYMN_DIR) ->
     if kinds["준비찬양"] and not content.get("준비찬양"):
         problems.append("내용에 '준비찬양'이 없습니다")
     if kinds["준비찬양"]:
-        for f in content.get("준비찬양", []):
-            if not (REPO / f).exists() and not Path(f).exists():
-                problems.append(f"준비찬양 파일이 없습니다: {f}")
+        with tempfile.TemporaryDirectory() as tmp:
+            for path, chorus in song_entries(content):
+                if not path.exists():
+                    problems.append(f"준비찬양 파일이 없습니다: {path}")
+                elif chorus:
+                    import insert
+                    n = len(Presentation(insert.convert_to_pptx(str(path), tmp)).slides)
+                    for k in chorus:
+                        if not 1 <= k <= n:
+                            problems.append(f"{path.name}: 후렴 장 번호 {k}이(가) 범위(1~{n}) 밖입니다")
     return problems
+
+
+def song_entries(content: dict) -> list:
+    """준비찬양 항목 → [(파일 경로, 후렴 장 번호 목록 또는 None)]. 항목은 경로 문자열 또는 {"파일":…, "후렴":[…]}."""
+    out = []
+    for e in content.get("준비찬양", []):
+        f, chorus = (e["파일"], e.get("후렴")) if isinstance(e, dict) else (e, None)
+        out.append((REPO / f if (REPO / f).exists() else Path(f), chorus))
+    return out
+
+
+def extract_slides(src: Path, numbers: list, out: Path) -> Path:
+    """src(pptx)에서 numbers(1부터) 장만 그 순서로 남긴 사본을 out에 만든다."""
+    prs = Presentation(str(src))
+    lst = prs.slides._sldIdLst
+    elems = list(lst)
+    keep = [n - 1 for n in numbers]
+    for el in elems:
+        lst.remove(el)
+    for i in keep + [i for i in range(len(elems)) if i not in keep]:
+        lst.append(elems[i])
+    slides.delete_slides(prs, list(range(len(keep), len(elems))))
+    prs.save(str(out))
+    return out
 
 
 def _section_names(items) -> list:
@@ -144,7 +175,12 @@ def assemble(structure_path, theme_path, content: dict, out_path, hymn_dir: Path
             if it.kind == "찬송":
                 srcs = [hymn_path(next(hymns), hymn_dir)]
             elif it.kind == "준비찬양":
-                srcs = [REPO / f if (REPO / f).exists() else Path(f) for f in content.get("준비찬양", [])]
+                srcs = []
+                for k, (path, chorus) in enumerate(song_entries(content)):
+                    full = rep.convert_to_pptx(str(path), tmp)
+                    if chorus:  # 후렴부터: 후렴 장 → 곡 전체
+                        srcs.append(str(extract_slides(Path(full), chorus, Path(tmp) / f"후렴_{k}.pptx")))
+                    srcs.append(full)
             else:
                 continue
             if srcs:

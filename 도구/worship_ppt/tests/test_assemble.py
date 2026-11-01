@@ -80,6 +80,19 @@ class AssembleTest(unittest.TestCase):
         probs = check_inputs(parse_structure(f), self.theme, {"찬송": []}, self.hymns)
         self.assertTrue(any("635장" in p for p in probs), probs)
 
+    def test_chorus_first(self):
+        content = dict(self.content, 준비찬양=[{"파일": str(self.prep), "후렴": [2, 3]}])
+        out = assemble(STRUCTURE, self.theme, content, self.dir / "c.pptx", self.hymns)
+        prs = Presentation(str(out))
+        idx = dict(slides.sections(prs))["준비찬양"]
+        texts = [prs.slides[i].shapes[0].text_frame.text for i in idx]
+        self.assertEqual(texts, ["준비곡 2", "준비곡 3", "준비곡 1", "준비곡 2", "준비곡 3"])
+
+    def test_chorus_out_of_range(self):
+        content = dict(self.content, 준비찬양=[{"파일": str(self.prep), "후렴": [9]}])
+        probs = check_inputs(parse_structure(STRUCTURE), self.theme, content, self.hymns)
+        self.assertTrue(any("후렴 장 번호 9" in p for p in probs), probs)
+
     def test_assemble(self):
         out = assemble(STRUCTURE, self.theme, self.content, self.dir / "out.pptx", self.hymns)
         prs = Presentation(str(out))
