@@ -58,6 +58,34 @@ class CheckTest(unittest.TestCase):
         problems = verify(bad, self.content)
         self.assertTrue(any("교독문 49" in p for p in problems), problems)
 
+    def test_verify_chapter_label(self):
+        bad = Path(self.tmp.name) / "bad3.pptx"
+        prs = Presentation(str(self.out))
+        idx = dict(slides.sections(prs))["말씀구절"][0]
+        find_shape(prs.slides[idx], "구절장").text_frame.paragraphs[0].runs[0].text = "사무엘하 22장"
+        prs.save(str(bad))
+        self.assertTrue(any("구절장" in p for p in verify(bad, self.content)))
+
+    def test_verify_title(self):
+        bad = Path(self.tmp.name) / "bad4.pptx"
+        prs = Presentation(str(self.out))
+        idx = dict(slides.sections(prs))["본문표지 1"][0]
+        find_shape(prs.slides[idx], "설교제목").text_frame.paragraphs[0].runs[0].text = "다른 제목"
+        prs.save(str(bad))
+        self.assertTrue(any("설교제목" in p for p in verify(bad, self.content)))
+
+    def test_verify_coverage(self):
+        content = dict(self.content, 본문="신 6:19-20")
+        d = Path(self.tmp.name)
+        out = assemble(STRUCTURE, make_mini_theme(d / "t2.pptx"), content, d / "o2.pptx", d / "hymns")
+        self.assertEqual(verify(out, content), [])
+        prs = Presentation(str(out))
+        idx = dict(slides.sections(prs))["말씀구절"][0]
+        slides.delete_slides(prs, [idx])
+        slides.set_sections(prs, [(n, len(i)) for n, i in slides.sections(prs)])  # 지운 장은 이미 빠져 있음
+        prs.save(str(d / "o3.pptx"))
+        self.assertTrue(any("19절" in p for p in verify(d / "o3.pptx", content)))
+
     def test_render(self):
         if shutil.which("pdftoppm") is None:
             self.skipTest("pdftoppm 없음")

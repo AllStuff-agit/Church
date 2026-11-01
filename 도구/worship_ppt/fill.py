@@ -2,6 +2,7 @@
 import copy
 import math
 import re
+import warnings
 
 import slides
 from theme import find_shape
@@ -46,6 +47,8 @@ def paginate_gyodokmun(lines: list, max_pairs: int = GYO_MAX_PAIRS, max_lines: i
     pages, page, used = [], [], 0
     for g in groups:
         cost = sum(_cost(r, t, chars) for r, t in g)
+        if cost > max_lines:
+            warnings.warn(f"교독문 한 묶음이 한 장에 넘칩니다({cost}줄 > {max_lines}줄): {g[0][1][:20]}…", UserWarning)
         if page and (len(page) >= max_pairs or used + cost > max_lines):
             pages.append(page); page, used = [], 0
         page.append(g); used += cost

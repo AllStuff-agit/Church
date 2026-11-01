@@ -126,8 +126,13 @@ def load_verses(p: Passage) -> list:
     """[(절, 본문)]. 앞 절에 묶인 빈 절은 건너뜀."""
     verses = _chapter(p.book, p.chapter)
     unit = "편" if p.book == "시편" else "장"
+    if p.start > p.end:
+        raise SourceError(f"{p.book} {p.chapter}{unit} {p.start}-{p.end}절: 끝 절이 시작 절보다 앞입니다")
+    start = p.start
+    while start > 1 and verses.get(start) == "":  # 묶음 절(예: 18-19) 중간에서 시작하면 묶음 첫 절부터
+        start -= 1
     out = []
-    for v in range(p.start, p.end + 1):
+    for v in range(start, p.end + 1):
         if v not in verses:
             raise SourceError(f"{p.book} {p.chapter}{unit} {v}절이 없습니다")
         if verses[v]:

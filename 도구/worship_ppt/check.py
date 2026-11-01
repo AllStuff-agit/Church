@@ -62,12 +62,51 @@ def verify(pptx: Path, content: dict) -> list:
                 b = _norm(expected[k][1]) if k < len(expected) else "(없음)"
                 if a != b:
                     problems.append(f"{label}: 슬라이드 '{a}' / 원본 '{b}'")
+        boxes = [find_shape(prs.slides[i], "구절장") for i in _kind_indices(prs, "말씀구절")]
+        labels = [e[0].rsplit(" ", 1)[0] for e in expected]
+        for k, (box, want) in enumerate(zip(boxes, labels)):
+            if _norm(box.text_frame.text) != want:
+                problems.append(f"{k + 1}번째 말씀구절 장 구절장: 슬라이드 '{_norm(box.text_frame.text)}' / 원본 '{want}'")
+        problems += _coverage(passages, got)
         ref = display_reference(passages)
         for i in _kind_indices(prs, "본문표지"):
             box = find_shape(prs.slides[i], "성경구절")
             if box is not None and _norm(box.text_frame.text) != ref:
                 problems.append(f"본문표지 성경구절: 슬라이드 '{_norm(box.text_frame.text)}' / 원본 '{ref}'")
+    if content.get("설교제목"):
+        want = re.sub(r"[\s()\[\]]", "", content["설교제목"])
+        for i in _kind_indices(prs, "본문표지"):
+            box = find_shape(prs.slides[i], "설교제목")
+            if box is not None:
+                got_title = re.sub(r"[\s()\[\]]", "", box.text_frame.text)
+            else:
+                group = find_shape(prs.slides[i], "본문 타이틀")
+                if group is None:
+                    continue
+                got_title = "".join(sh.text_frame.text for sh in group.shapes if sh.name.startswith("설교제목글자"))
+            if got_title != want:
+                problems.append(f"본문표지 설교제목: 슬라이드 '{got_title}' / 원본 '{want}'")
     return problems
+
+
+def _coverage(passages, slide_texts) -> list:
+    """원본 장 파일을 직접 읽어(채우기 코드와 별개) 요청한 절이 모두 슬라이드에 있는지 확인한다.
+    묶음 절(예: 18-19)은 첫 절 번호로 시작하는 장이 있으면 함께 있는 것으로 본다."""
+    from sources import _books
+
+    heads = {int(m.group(1)) for t in slide_texts if (m := re.match(r"(\d+) ", _norm(t)))}
+    out = []
+    for p in passages:
+        unit = "편" if p.book == "시편" else "장"
+        f = next(f for f in _books()[p.book].glob("*.txt") if int(re.search(r"(\d+)[장편]$", f.stem).group(1)) == p.chapter)
+        ranges = [(int(m.group(1)), int(m.group(2) or m.group(1)))
+                  for line in f.read_text(encoding="utf-8").splitlines()
+                  if (m := re.match(r"\D+?\d+:(\d+)(?:-(\d+))?\s", line))]
+        for v in range(p.start, p.end + 1):
+            head = next((a for a, b in ranges if a <= v <= b), None)
+            if head is None or head not in heads:
+                out.append(f"{p.book} {p.chapter}{unit} {v}절이 슬라이드에 없습니다")
+    return out
 
 
 def render(pptx: Path, out_dir: Path, dpi: int = 40) -> Path:

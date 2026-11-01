@@ -40,6 +40,11 @@ class PaginateTest(unittest.TestCase):
         narrow = paginate_gyodokmun(lines, chars={"인도": 12, "회중": 10, "다같이": 10})
         self.assertGreater(len(narrow), len(wide))
 
+    def test_overflow_warns(self):
+        long = "가" * 400
+        with self.assertWarnsRegex(UserWarning, "넘칩니다"):
+            paginate_gyodokmun([("인도", long), ("회중", "짧은 줄")])
+
     def test_split_tail(self):
         self.assertEqual(split_tail("망하리로다 (1-6) (아멘)"), ("망하리로다", "(1-6) (아멘)"))
         self.assertEqual(split_tail("경외할지어다 (시33:8)"), ("경외할지어다", "(시33:8)"))

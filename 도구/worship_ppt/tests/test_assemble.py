@@ -64,6 +64,22 @@ class AssembleTest(unittest.TestCase):
         probs = check_inputs(parse_structure(STRUCTURE), self.theme, bad, self.hymns)
         self.assertTrue(any("없는곡.pptx" in p for p in probs), probs)
 
+    def test_check_no_prep_list(self):
+        bad = {k: v for k, v in self.content.items() if k != "준비찬양"}
+        probs = check_inputs(parse_structure(STRUCTURE), self.theme, bad, self.hymns)
+        self.assertIn("내용에 '준비찬양'이 없습니다", probs)
+
+    def test_check_bad_number(self):
+        bad = dict(self.content, 교독문="49번")
+        probs = check_inputs(parse_structure(STRUCTURE), self.theme, bad, self.hymns)
+        self.assertTrue(any("교독문" in p and "49번" in p for p in probs), probs)
+
+    def test_structure_bad_hymn_number(self):
+        f = self.dir / "s.txt"
+        f.write_text("찬송 635장\n", encoding="utf-8")
+        probs = check_inputs(parse_structure(f), self.theme, {"찬송": []}, self.hymns)
+        self.assertTrue(any("635장" in p for p in probs), probs)
+
     def test_assemble(self):
         out = assemble(STRUCTURE, self.theme, self.content, self.dir / "out.pptx", self.hymns)
         prs = Presentation(str(out))

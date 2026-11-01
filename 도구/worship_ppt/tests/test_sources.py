@@ -44,6 +44,11 @@ class VerseTest(unittest.TestCase):
         self.assertEqual(vs[0], (1, "태초에 하나님이 천지를 창조하시니라"))
         self.assertEqual(len(vs), 2)
 
+    def test_start_inside_bundle(self):
+        vs = load_verses(Passage("신명기", 6, 19, 20))
+        self.assertEqual([n for n, _ in vs], [18, 20])
+        self.assertIn("여호와께서 보시기에 정직하고 선량한 일을 행하라", vs[0][1])
+
     def test_missing_verse(self):
         with self.assertRaisesRegex(SourceError, "민수기 31장 60절"):
             load_verses(Passage("민수기", 31, 60, 60))

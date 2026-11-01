@@ -55,8 +55,12 @@ def check_inputs(items, theme_path, content: dict, hymn_dir: Path = HYMN_DIR) ->
     if kinds["교독문"]:
         try:
             load_gyodokmun(int(content["교독문"]))
-        except (KeyError, SourceError) as e:
-            problems.append(f"교독문: {e}" if not isinstance(e, KeyError) else "내용에 '교독문' 번호가 없습니다")
+        except KeyError:
+            problems.append("내용에 '교독문' 번호가 없습니다")
+        except ValueError:
+            problems.append(f"내용 '교독문'은 숫자만 적어야 합니다: '{content['교독문']}'")
+        except SourceError as e:
+            problems.append(f"교독문: {e}")
     if kinds["말씀구절"] or kinds["본문표지"]:
         try:
             for p in parse_reference(content["본문"]):
@@ -65,14 +69,25 @@ def check_inputs(items, theme_path, content: dict, hymn_dir: Path = HYMN_DIR) ->
             problems.append("내용에 '본문'이 없습니다")
         except SourceError as e:
             problems.append(f"본문: {e}")
-    if kinds["본문표지"] and not content.get("설교제목"):
+    if kinds["본문표지"] and not str(content.get("설교제목", "")).strip():
         problems.append("내용에 '설교제목'이 없습니다")
+    for it in items:
+        if it.kind == "찬송" and it.arg and not it.arg.isdigit():
+            problems.append(f"구조의 '찬송 {it.arg}': 번호는 숫자만 적어야 합니다(예: 찬송 635)")
+    if any(problems[-1:]) and "번호는 숫자만" in problems[-1]:
+        return problems
+    for n in content.get("찬송", []):
+        if not str(n).isdigit():
+            problems.append(f"내용 '찬송'은 숫자만 적어야 합니다: '{n}'")
+            return problems
     free = sum(1 for it in items if it.kind == "찬송" and not it.arg)
     if len(content.get("찬송", [])) != free:
         problems.append(f"구조에 번호 없는 찬송이 {free}곡인데 내용 '찬송'은 {len(content.get('찬송', []))}곡입니다")
     for n in _hymn_numbers(items, content):
         if n is not None and hymn_path(n, hymn_dir) is None:
             problems.append(f"찬송 {n}장 파일이 없습니다: {Path(hymn_dir) / f'새찬송가_{int(n):03d}장.ppt'}")
+    if kinds["준비찬양"] and not content.get("준비찬양"):
+        problems.append("내용에 '준비찬양'이 없습니다")
     if kinds["준비찬양"]:
         for f in content.get("준비찬양", []):
             if not (REPO / f).exists() and not Path(f).exists():
