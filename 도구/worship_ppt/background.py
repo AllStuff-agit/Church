@@ -1,6 +1,6 @@
 """흰 바탕 악보 슬라이드에 배경 넣기(준비찬양 배경 보완).
 
-.claude/skills/church-worship-ppt/scripts/ppt_section_replacer.py에서 옮겨 왔다(동작 동일, 오류는 예외로).
+옛 church-worship-ppt 스킬(2026-11 삭제)의 ppt_section_replacer.py에서 옮겨 왔다(동작 동일, 오류는 예외로).
 """
 import posixpath
 

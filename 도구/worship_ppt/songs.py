@@ -1,6 +1,6 @@
 """준비찬양 곡 파일 찾기와 티스토리(cwy0675) 16:9 내려받기.
 
-.claude/skills/church-worship-ppt/scripts/ppt_section_replacer.py에서 옮겨 왔다.
+옛 church-worship-ppt 스킬(2026-11 삭제)의 ppt_section_replacer.py에서 옮겨 왔다.
 16:9만 쓰므로 첨부 선택만 _Wide 전용으로 바꿨다.
 """
 import re

@@ -1,6 +1,6 @@
 """찬송·준비찬양 PPT를 예배 PPT의 빈 섹션에 끼우기.
 
-.claude/skills/church-worship-ppt/scripts/ppt_section_replacer.py에서 필요한 부분만 옮겨 온 것(동작 동일).
+옛 church-worship-ppt 스킬(2026-11 삭제)의 ppt_section_replacer.py에서 필요한 부분만 옮겨 온 것(동작 동일).
 조립 도구가 스킬 파일에 의존하지 않도록 독립시켰다.
 """
 import copy
