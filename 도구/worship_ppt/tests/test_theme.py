@@ -54,6 +54,7 @@ class SlideOpsTest(unittest.TestCase):
         prs = Presentation(make_mini_theme(self.dir / "t.pptx"))
         new = slides.duplicate_slide(prs, 5)
         self.assertEqual(new, 9)
+        self.assertIsNotNone(find_shape(prs.slides[new], "구절본문"))  # 저장 전 메모리에서도 보여야 함
         out = self.dir / "o.pptx"
         prs.save(out)
         prs2 = Presentation(out)

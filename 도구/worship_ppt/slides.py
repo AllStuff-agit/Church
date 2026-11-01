@@ -23,11 +23,22 @@ def duplicate_slide(prs, index: int) -> int:
             rid_map[rid] = new.part.relate_to(rel.target_ref, rel.reltype, is_external=True)
         else:
             rid_map[rid] = new.part.relate_to(rel.target_part, rel.reltype)
-    sld = new._element
+    # python-pptx가 새 장의 spTree 요소를 붙잡아 두므로(shapes 캐시) 그 요소는 그대로 두고 안쪽만 바꾼다
+    sld, src_sld = new._element, src._element
+    tree, src_tree = sld.cSld.spTree, src_sld.cSld.spTree
+    for child in list(tree):
+        tree.remove(child)
+    for child in src_tree:
+        tree.append(copy.deepcopy(child))
+    for child in src_sld.cSld:
+        if child is not src_tree:
+            tree.addprevious(copy.deepcopy(child)) if child.tag.endswith("}bg") else sld.cSld.append(copy.deepcopy(child))
     for child in list(sld):
-        sld.remove(child)
-    for child in src._element:
-        sld.append(copy.deepcopy(child))
+        if child is not sld.cSld:
+            sld.remove(child)
+    for child in src_sld:
+        if child is not src_sld.cSld:
+            sld.append(copy.deepcopy(child))
     for el in sld.iter():
         for attr, value in list(el.attrib.items()):
             if attr.startswith(f"{{{R}}}") and value in rid_map:
