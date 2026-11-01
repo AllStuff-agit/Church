@@ -53,6 +53,18 @@ class TistorySearchTests(unittest.TestCase):
 
         self.assertIsNone(MODULE.select_ppt_attachment(attachments))
 
+    def test_collect_attachments_by_label(self):
+        # 실제 티스토리 첨부: 주소에 확장자가 없고 글자에만 파일 이름이 있다
+        html = """
+        <a href="https://t1.daumcdn.net/cfile/tistory/997602475E2BFEAB33">곡.nwc</a>
+        <a href="https://t1.daumcdn.net/cfile/tistory/99BA55395E2BFEAB36">곡.PPT</a>
+        <a href="https://t1.daumcdn.net/cfile/tistory/99F81F3E5E2BFEAB32">곡_Wide.PPT</a>
+        <a href="/category">카테고리</a>
+        """
+        links = MODULE.collect_attachments(html, f"{BASE}/entry/곡")
+        self.assertEqual(MODULE.select_ppt_attachment(links),
+                         "https://t1.daumcdn.net/cfile/tistory/99F81F3E5E2BFEAB32")
+
     def test_search_file(self):
         found = MODULE.search_file(MODULE.SONG_DIR, "주 품에 품으소서")
         self.assertEqual(found[0]["file"].name, "주 품에 품으소서.PPT")

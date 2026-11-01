@@ -131,6 +131,22 @@ def choose_site_search_result(title: str, candidates: list[dict]) -> str | None:
     return ranked[0][-1]
 
 
+def collect_attachments(html: str, post_url: str) -> list[dict]:
+    """글의 첨부 링크 목록. 주소(…/file.ppt)나 링크 글자(cfile 주소 + '곡_Wide.PPT')에 PPT 이름이 있는 것."""
+    from bs4 import BeautifulSoup
+
+    links = []
+    for a in BeautifulSoup(html, 'html.parser').find_all('a', href=True):
+        href = urljoin(post_url, a['href'].strip())
+        name_part = unquote(urlparse(href).path).rsplit('/', 1)[-1].lower()
+        label = a.get_text(' ', strip=True)
+        if name_part.endswith(('.ppt', '.pptx')) or label.lower().endswith(('.ppt', '.pptx')):
+            links.append({'url': href, 'label': label})
+        elif 'tistory.com' in urlparse(href).netloc and re.search(r'/attach(ment)?/', urlparse(href).path):
+            links.append({'url': href, 'label': label})  # 확장자 없으면 Content-Disposition으로 확인
+    return links
+
+
 def select_ppt_attachment(attachments: list[dict]) -> str | None:
     """첨부 목록에서 16:9(_Wide) .ppt/.pptx만 고른다. 4:3 일반 파일과 .nwc는 받지 않는다."""
     candidates = []
@@ -223,17 +239,7 @@ def tistory_download(title: str, folder: str) -> str | None:
             soup = BeautifulSoup(r.text, 'html.parser')
 
     # 3. 첨부파일 링크 탐색
-    attach_links = []
-    for a in soup.find_all('a', href=True):
-        href = urljoin(post_url, a['href'].strip())
-        name_part = unquote(urlparse(href).path).rsplit('/', 1)[-1].lower()
-        label = a.get_text(' ', strip=True)
-        if name_part.endswith('.ppt') or name_part.endswith('.pptx'):
-            attach_links.append({'url': href, 'label': label})
-        elif 'tistory.com' in urlparse(href).netloc and re.search(r'/attach(ment)?/', urlparse(href).path):
-            # href에 확장자 없어도 Content-Disposition으로 확인
-            attach_links.append({'url': href, 'label': label})
-
+    attach_links = collect_attachments(str(soup), post_url)
     target_url = select_ppt_attachment(attach_links)
     if not target_url:
         print(f"  NOT_FOUND: '{title}' 포스트에서 16:9(_Wide) PPT 첨부파일 없음 ({post_url})")
