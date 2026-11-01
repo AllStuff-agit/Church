@@ -117,14 +117,19 @@ def extract_slides(src: Path, numbers: list, out: Path) -> Path:
     return out
 
 
-def _section_names(items) -> list:
+def _sections(items, content) -> list:
+    """구조 항목 → [(항목, 섹션 이름, 준비찬양 곡 또는 None)]. 준비찬양은 곡마다 '준비찬양 N' 섹션 하나."""
     total = Counter(it.kind for it in items)
     seen = Counter()
-    names = []
+    out = []
     for it in items:
+        if it.kind == "준비찬양":
+            for k, song in enumerate(song_entries(content), 1):
+                out.append((it, f"준비찬양 {k}", song))
+            continue
         seen[it.kind] += 1
-        names.append(f"{it.kind} {seen[it.kind]}" if total[it.kind] > 1 else it.kind)
-    return names
+        out.append((it, f"{it.kind} {seen[it.kind]}" if total[it.kind] > 1 else it.kind, None))
+    return out
 
 
 def assemble(structure_path, theme_path, content: dict, out_path, hymn_dir: Path = HYMN_DIR) -> Path:
@@ -138,9 +143,10 @@ def assemble(structure_path, theme_path, content: dict, out_path, hymn_dir: Path
     samples = kind_slides(prs)
     n_samples = len(prs.slides)
     passages = parse_reference(content["본문"]) if "본문" in content else []
+    plan = _sections(items, content)
 
     groups = []
-    for it in items:
+    for it, _, _ in plan:
         if it.kind in INSERT_KINDS:
             groups.append([])
             continue
@@ -163,28 +169,25 @@ def assemble(structure_path, theme_path, content: dict, out_path, hymn_dir: Path
     for i in order:
         lst.append(elems[i])
     slides.delete_slides(prs, list(range(len(order) - n_samples, len(order))))
-    names = _section_names(items)
-    slides.set_sections(prs, [(name, len(g)) for name, g in zip(names, groups)])
+    slides.set_sections(prs, [(name, len(g)) for (_, name, _), g in zip(plan, groups)])
     prs.save(str(out_path))
 
     # 찬송·준비찬양 끼우기
     import insert as rep
     hymns = iter(_hymn_numbers(items, content))
     with tempfile.TemporaryDirectory() as tmp:
-        for it, name in zip(items, names):
+        for k, (it, name, song) in enumerate(plan):
             if it.kind == "찬송":
-                srcs = [hymn_path(next(hymns), hymn_dir)]
+                srcs = [str(hymn_path(next(hymns), hymn_dir))]
             elif it.kind == "준비찬양":
-                srcs = []
-                for k, (path, chorus) in enumerate(song_entries(content)):
-                    full = rep.convert_to_pptx(str(path), tmp)
-                    if chorus:  # 후렴부터: 후렴 장 → 곡 전체
-                        srcs.append(str(extract_slides(Path(full), chorus, Path(tmp) / f"후렴_{k}.pptx")))
-                    srcs.append(full)
+                path, chorus = song
+                full = rep.convert_to_pptx(str(path), tmp)
+                srcs = [full]
+                if chorus:  # 후렴부터: 후렴 장 → 곡 전체
+                    srcs.insert(0, str(extract_slides(Path(full), chorus, Path(tmp) / f"후렴_{k}.pptx")))
             else:
                 continue
-            if srcs:
-                rep.replace_section_zip(str(out_path), name, [rep.convert_to_pptx(str(s), tmp) for s in srcs], tmp)
+            rep.replace_section_zip(str(out_path), name, [rep.convert_to_pptx(s, tmp) for s in srcs], tmp)
     return out_path
 
 

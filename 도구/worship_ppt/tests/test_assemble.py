@@ -84,9 +84,20 @@ class AssembleTest(unittest.TestCase):
         content = dict(self.content, 준비찬양=[{"파일": str(self.prep), "후렴": [2, 3]}])
         out = assemble(STRUCTURE, self.theme, content, self.dir / "c.pptx", self.hymns)
         prs = Presentation(str(out))
-        idx = dict(slides.sections(prs))["준비찬양"]
+        idx = dict(slides.sections(prs))["준비찬양 1"]
         texts = [prs.slides[i].shapes[0].text_frame.text for i in idx]
         self.assertEqual(texts, ["준비곡 2", "준비곡 3", "준비곡 1", "준비곡 2", "준비곡 3"])
+
+    def test_one_section_per_song(self):
+        second = _hymn(self.dir / "둘째곡.pptx", 2)
+        content = dict(self.content, 준비찬양=[str(self.prep), {"파일": str(second), "후렴": [2]}])
+        out = assemble(STRUCTURE, self.theme, content, self.dir / "m.pptx", self.hymns)
+        secs = slides.sections(Presentation(str(out)))
+        names = [n for n, _ in secs]
+        self.assertEqual(names[:4], ["대기 1", "준비찬양 1", "준비찬양 2", "대기 2"])
+        count = {n: len(i) for n, i in secs}
+        self.assertEqual(count["준비찬양 1"], 3)
+        self.assertEqual(count["준비찬양 2"], 3)  # 후렴 1장 + 전체 2장
 
     def test_chorus_out_of_range(self):
         content = dict(self.content, 준비찬양=[{"파일": str(self.prep), "후렴": [9]}])
@@ -98,7 +109,7 @@ class AssembleTest(unittest.TestCase):
         prs = Presentation(str(out))
         secs = slides.sections(prs)
         names = [n for n, _ in secs]
-        self.assertEqual(names, ["대기 1", "준비찬양", "대기 2", "사도신경", "교독문", "참회기도", "찬송 1",
+        self.assertEqual(names, ["대기 1", "준비찬양 1", "대기 2", "사도신경", "교독문", "참회기도", "찬송 1",
                                  "본문표지 1", "말씀구절", "본문표지 2", "찬송 2", "소식", "찬송 3", "축도", "엔딩"])
         count = {n: len(i) for n, i in secs}
         tp = Presentation(str(self.theme))
@@ -107,7 +118,7 @@ class AssembleTest(unittest.TestCase):
         self.assertEqual(count["교독문"], 1 + len(pages))
         expected = sum(len(split_verse(n, v)) for p in parse_reference("사무엘하 21:1-3") for n, v in load_verses(p))
         self.assertEqual(count["말씀구절"], expected)
-        self.assertEqual(count["준비찬양"], 3)
+        self.assertEqual(count["준비찬양 1"], 3)
         self.assertEqual(count["찬송 1"], 2)
         self.assertEqual(len(prs.slides), sum(count.values()))
 
