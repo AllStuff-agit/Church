@@ -154,14 +154,32 @@ def main(argv=None):
     b.add_argument("--테마", required=True)
     b.add_argument("--내용", required=True)
     b.add_argument("--출력")
+    r = sub.add_parser("render")
+    r.add_argument("파일")
+    r.add_argument("--폴더", help="PNG 저장 폴더(기본: 임시 폴더)")
+    v = sub.add_parser("verify")
+    v.add_argument("파일")
+    v.add_argument("--내용", required=True)
     args = ap.parse_args(argv)
+    from check import render, verify
+
+    if args.cmd == "render":
+        out_dir = Path(args.폴더) if args.폴더 else Path(tempfile.mkdtemp(prefix="worship_render_"))
+        print(f"모아보기: {render(Path(args.파일), out_dir)}")
+        return
     content = json.loads(Path(args.내용).read_text(encoding="utf-8"))
+    if args.cmd == "verify":
+        problems = verify(Path(args.파일), content)
+        print("대조 결과: 원본과 일치" if not problems else "대조 결과: 다른 곳 있음\n- " + "\n- ".join(problems))
+        sys.exit(1 if problems else 0)
     out = Path(args.출력) if args.출력 else REPO / "4_예배PPT/주일" / f"{content['date']}_주일.pptx"
     out = assemble(Path(args.구조), Path(args.테마), content, out)
     prs = Presentation(str(out))
     print(f"완료: {out.relative_to(REPO) if out.is_relative_to(REPO) else out}")
     for name, idx in slides.sections(prs):
         print(f"  {name}: {len(idx)}장")
+    problems = verify(out, content)
+    print("대조 결과: 원본과 일치" if not problems else "대조 결과: 다른 곳 있음\n- " + "\n- ".join(problems))
 
 
 if __name__ == "__main__":
