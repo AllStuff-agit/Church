@@ -122,3 +122,41 @@ def fill_gyodokmun(prs, section_slides: list, g) -> list:
     if sub is not None:
         _set_text(sub, g.title)
     return [cover] + targets
+
+
+# ── 말씀구절 ──────────────────────────────────────────────
+
+VERSE_MAX_CHARS = 110  # 초록잎들꽃 견본(HY견고딕 38.4pt, 약 7줄) 기준 한 장에 넣는 글자 수
+
+
+def split_verse(number: int, text: str, max_chars: int = VERSE_MAX_CHARS) -> list:
+    """한 절을 장 단위 조각으로. 조각 길이를 고르게 하고, 첫 조각만 절 번호, 낱말 중간에서 자르지 않는다."""
+    full = f"{number} {text}"
+    target = len(full) / math.ceil(len(full) / max_chars)
+    words, parts, cur = text.split(), [], f"{number}"
+    for w in words:
+        if len(cur) + 1 + len(w) > target + 5 and cur not in (f"{number}", ""):
+            parts.append(cur)
+            cur = w
+        else:
+            cur = f"{cur} {w}" if cur else w
+    parts.append(cur)
+    return parts
+
+
+def fill_verses(prs, slide_index: int, passages: list, max_chars: int = VERSE_MAX_CHARS) -> list:
+    """말씀구절 견본을 절(조각)마다 한 장씩 채운다. 견본 자신이 첫 장."""
+    from sources import load_verses  # 순환 import 피함
+
+    pieces = []
+    for p in passages:
+        unit = "편" if p.book == "시편" else "장"
+        for number, text in load_verses(p):
+            for piece in split_verse(number, text, max_chars):
+                pieces.append((f"{p.book} {p.chapter}{unit}", piece))
+    targets = [slide_index] + [slides.duplicate_slide(prs, slide_index) for _ in pieces[1:]]
+    for idx, (chapter, piece) in zip(targets, pieces):
+        s = prs.slides[idx]
+        _set_text(find_shape(s, "구절장"), chapter)
+        _set_text(find_shape(s, "구절본문"), piece)
+    return targets
