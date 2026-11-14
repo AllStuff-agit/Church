@@ -54,6 +54,20 @@ class AssembleTest(unittest.TestCase):
         probs = check_inputs(parse_structure(STRUCTURE), self.theme, bad, self.hymns)
         self.assertTrue(any("찬송 999장" in p for p in probs), probs)
 
+    def test_song_in_hymn_slot(self):
+        # 설교 후 찬송 자리에 찬송가 번호 대신 찬양곡 파일을 넣는 주
+        content = dict(self.content, 찬송=[337, str(self.prep)])
+        self.assertEqual(check_inputs(parse_structure(STRUCTURE), self.theme, content, self.hymns), [])
+        out = assemble(STRUCTURE, self.theme, content, self.dir / "s.pptx", self.hymns)
+        prs = Presentation(str(out))
+        idx = dict(slides.sections(prs))["찬송 2"]
+        self.assertEqual([prs.slides[i].shapes[0].text_frame.text for i in idx], ["준비곡 1", "준비곡 2", "준비곡 3"])
+
+    def test_check_missing_song_in_hymn_slot(self):
+        bad = dict(self.content, 찬송=[337, "없는곡.pptx"])
+        probs = check_inputs(parse_structure(STRUCTURE), self.theme, bad, self.hymns)
+        self.assertTrue(any("없는곡.pptx" in p for p in probs), probs)
+
     def test_check_hymn_count(self):
         bad = dict(self.content, 찬송=[337])
         probs = check_inputs(parse_structure(STRUCTURE), self.theme, bad, self.hymns)

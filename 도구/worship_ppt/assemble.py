@@ -35,9 +35,17 @@ def hymn_path(n: int, hymn_dir: Path) -> Path | None:
 
 
 def _hymn_numbers(items, content) -> list:
-    """구조 순서대로 찬송 번호: 번호가 적힌 항목은 그 번호, 아니면 content['찬송']에서 차례로."""
+    """구조 순서대로 찬송 항목: 번호가 적힌 항목은 그 번호, 아니면 content['찬송']에서 차례로(번호 또는 찬양곡 경로)."""
     free = iter(content.get("찬송", []))
     return [int(it.arg) if it.arg else next(free, None) for it in items if it.kind == "찬송"]
+
+
+def hymn_source(entry, hymn_dir: Path) -> Path | None:
+    """찬송 항목 → 파일. 숫자면 새찬송가 번호, 아니면 찬양곡 파일 경로(저장소 기준 또는 절대 경로)."""
+    if str(entry).isdigit():
+        return hymn_path(int(entry), hymn_dir)
+    f = REPO / str(entry) if (REPO / str(entry)).exists() else Path(str(entry))
+    return f if f.exists() else None
 
 
 def check_inputs(items, theme_path, content: dict, hymn_dir: Path = HYMN_DIR) -> list:
@@ -67,16 +75,16 @@ def check_inputs(items, theme_path, content: dict, hymn_dir: Path = HYMN_DIR) ->
             problems.append(f"구조의 '찬송 {it.arg}': 번호는 숫자만 적어야 합니다(예: 찬송 635)")
     if any(problems[-1:]) and "번호는 숫자만" in problems[-1]:
         return problems
-    for n in content.get("찬송", []):
-        if not str(n).isdigit():
-            problems.append(f"내용 '찬송'은 숫자만 적어야 합니다: '{n}'")
-            return problems
     free = sum(1 for it in items if it.kind == "찬송" and not it.arg)
     if len(content.get("찬송", [])) != free:
         problems.append(f"구조에 번호 없는 찬송이 {free}곡인데 내용 '찬송'은 {len(content.get('찬송', []))}곡입니다")
     for n in _hymn_numbers(items, content):
-        if n is not None and hymn_path(n, hymn_dir) is None:
+        if n is None or hymn_source(n, hymn_dir) is not None:
+            continue
+        if str(n).isdigit():
             problems.append(f"찬송 {n}장 파일이 없습니다: {Path(hymn_dir) / f'새찬송가_{int(n):03d}장.ppt'}")
+        else:
+            problems.append(f"찬송 파일이 없습니다: {n} (찬송가는 번호, 찬양곡은 파일 경로를 적습니다)")
     if kinds["준비찬양"] and not content.get("준비찬양"):
         problems.append("내용에 '준비찬양'이 없습니다")
     if kinds["준비찬양"]:
@@ -179,7 +187,7 @@ def assemble(structure_path, theme_path, content: dict, out_path, hymn_dir: Path
     with tempfile.TemporaryDirectory() as tmp:
         for k, (it, name, song) in enumerate(plan):
             if it.kind == "찬송":
-                srcs = [str(hymn_path(next(hymns), hymn_dir))]
+                srcs = [str(hymn_source(next(hymns), hymn_dir))]
             elif it.kind == "준비찬양":
                 path, chorus = song
                 full = rep.convert_to_pptx(str(path), tmp)
